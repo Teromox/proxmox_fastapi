@@ -122,7 +122,7 @@ def add_disk(vmid):
         verify=False
     )
     res = json.loads(response.text)
-    print(res.text)
+    print(res)
     taskid = res.get("data")
     if taskid:
         wait_task(taskid)
