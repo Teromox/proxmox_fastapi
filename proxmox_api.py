@@ -201,6 +201,10 @@ def delete_vm(vmid):
         headers={
             "Authorization": AUTH_TXT
         },
+        params={
+            "purge": 1,
+            "destroy-unreferenced-disks": 1
+        },
         verify=False
     )
     res = json.loads(response.text)

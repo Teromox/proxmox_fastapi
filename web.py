@@ -27,11 +27,18 @@ def is_exist_port(ext_port):
     cur.execute("SELECT * FROM nat_table WHERE ext_port=?", (ext_port,))
     result = cur.fetchone()
     con.close()
-    return True if result is None else False
+    return True if result else False
 
-def add_port(ext_port, ip, in_port):
+def get_exist_port(ext_port):
+    con, cur = start_db()
+    cur.execute("SELECT * FROM nat_table WHERE ext_port=?", (ext_port,))
+    result = cur.fetchone()
+    con.close()
+    return result if result else False
+
+def adder_port(ext_port, ip, in_port):
     try:
-        if not is_exist_port(ext_port):
+        if is_exist_port(ext_port):
             return False
         proxmox_api.add_port_forwarding(
             external_port=ext_port,
@@ -47,11 +54,12 @@ def add_port(ext_port, ip, in_port):
         con.close()
         return True
     
-def remove_port(ext_port):
+def remover_port(ext_port):
     try:
-        if is_exist_port(ext_port):
+        if not is_exist_port(ext_port):
             return False
-        proxmox_api.remove_port_forwarding(ext_port)
+        _, internal_ip, internal_port = get_exist_port(ext_port)
+        proxmox_api.delete_port_forwarding(ext_port, internal_ip, internal_port)
     except Exception as e:
         return False
     else:
@@ -63,7 +71,7 @@ def remove_port(ext_port):
     
 def make_vm(vmid ,username):
     proxmox_api.create_vm(vmid)
-    private_pem, password = proxmox_api.setting_vm(username, vmid)
+    _, private_pem, password = proxmox_api.setting_vm(username, vmid)
     proxmox_api.add_disk(vmid)
     proxmox_api.set_boot(vmid)
     proxmox_api.start_vm(vmid)
@@ -73,7 +81,7 @@ def remove_vm(vmid):
     proxmox_api.stop_vm(vmid)
     proxmox_api.delete_vm(vmid)
 
-def remake_vm(username, vmid):
+def remaker_vm(username, vmid):
     proxmox_api.stop_vm(vmid)
     proxmox_api.delete_vm(vmid)
     return make_vm(vmid, username)
@@ -93,10 +101,10 @@ class AddPort(BaseModel):
     in_port: int
     
 @app.post("/api/port")
-def add_port(add_port: AddPort, api_key: str = fastapi.Header(...)):
+def add_port(addport: AddPort, api_key: str = fastapi.Header(...)):
     if not check_authentication(api_key):
         raise NOT_AUTH
-    if add_port(add_port.ext_port, add_port.ip, add_port.in_port):
+    if adder_port(addport.ext_port, addport.ip, addport.in_port):
         return {"message": "Port added successfully"}
     raise fastapi.HTTPException(status_code=400, detail="Failed to add port")
 
@@ -104,10 +112,10 @@ class RemovePort(BaseModel):
     ext_port: int
 
 @app.delete("/api/port")
-def remove_port(remove_port: RemovePort, api_key: str = fastapi.Header(...)):
+def remove_port(removeport: RemovePort, api_key: str = fastapi.Header(...)):
     if not check_authentication(api_key):
         raise NOT_AUTH
-    if remove_port(remove_port.ext_port):
+    if remover_port(removeport.ext_port):
         return {"message": "Port removed successfully"}
     raise fastapi.HTTPException(status_code=400, detail="Failed to remove port")
 
@@ -134,11 +142,7 @@ def create_vm(username: str, api_key: str = fastapi.Header(...)):
     vmid = proxmox_api.get_next_vmid()
     vmid, private_pem, password = make_vm(vmid, username)
     ssh_port = get_blank_port()
-    proxmox_api.add_port_forwarding(
-        external_port=ssh_port,
-        internal_ip=f"10.0.0.{vmid}",
-        internal_port=22
-    )
+    adder_port(ssh_port, f"10.0.0.{vmid}", 22)
     return {
         "vmid": vmid, 
         "private_key": private_pem, 
@@ -158,7 +162,7 @@ def delete_vm(vmid: int, api_key: str = fastapi.Header(...)):
 def remake_vm(username: str, vmid: int, api_key: str = fastapi.Header(...)):
     if not check_authentication(api_key):
         raise NOT_AUTH
-    vmid, private_pem, password = remake_vm(username, vmid)
+    vmid, private_pem, password = remaker_vm(username, vmid)
     return {"vmid": vmid, "private_key": private_pem, "password": password}
         
 @app.get("/api/vm/status")
@@ -168,7 +172,7 @@ def get_vm_status(vmid: int, api_key: str = fastapi.Header(...)):
     return {"data": proxmox_api.get_vm_status(vmid)}
 
 @app.get("/api/vm/blank_port")
-def get_blank_port(api_key: str = fastapi.Header(...)):
+def get_blanked_port(api_key: str = fastapi.Header(...)):
     if not check_authentication(api_key):
         raise NOT_AUTH
     return {"data": get_blank_port()}
