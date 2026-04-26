@@ -167,7 +167,7 @@ def get_vm_status(vmid: int, api_key: str = fastapi.Header(...)):
         raise NOT_AUTH
     return {"data": proxmox_api.get_vm_status(vmid)}
 
-@app.post("/api/vm/blank_port")
+@app.get("/api/vm/blank_port")
 def get_blank_port(api_key: str = fastapi.Header(...)):
     if not check_authentication(api_key):
         raise NOT_AUTH
