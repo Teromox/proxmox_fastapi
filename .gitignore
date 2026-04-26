@@ -1,0 +1,4 @@
+etc/*
+db.db
+settings.py
+__pycache__/*
