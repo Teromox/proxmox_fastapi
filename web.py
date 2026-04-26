@@ -39,6 +39,7 @@ def get_exist_port(ext_port):
 def adder_port(ext_port, ip, in_port):
     try:
         if is_exist_port(ext_port):
+            print(f"Port {ext_port} is already in use")
             return False
         proxmox_api.add_port_forwarding(
             external_port=ext_port,
@@ -46,6 +47,7 @@ def adder_port(ext_port, ip, in_port):
             internal_port=in_port
         )
     except Exception as e:
+        print(e)
         return False
     else:
         con, cur = start_db()
