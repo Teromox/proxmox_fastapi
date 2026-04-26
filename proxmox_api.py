@@ -114,8 +114,8 @@ def setting_vm(username, vmid):
     return response.text, private_pem, password
 
 def add_disk(vmid):
-    data = {"disk": "scsi0", "size": "20G"}
-    response = requests.post(
+    data = {"disk": "scsi0", "size": "+20G"}
+    response = requests.put(
         url=BASE_URL+f"/api2/json/nodes/{NODE}/qemu/{vmid}/resize",
         headers={"Authorization": AUTH_TXT},
         data=data,
