@@ -80,6 +80,12 @@ def make_vm(vmid ,username):
 def remove_vm(vmid):
     proxmox_api.stop_vm(vmid)
     proxmox_api.delete_vm(vmid)
+    con, cur = start_db()
+    cur.execute("SELECT ext_port FROM nat_table WHERE ip=?", (f"10.0.0.{vmid}",))
+    ports = cur.fetchall()
+    for port in ports:
+        remover_port(port[0])
+    con.close()
 
 def remaker_vm(username, vmid):
     proxmox_api.stop_vm(vmid)
