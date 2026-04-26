@@ -110,6 +110,8 @@ class AddPort(BaseModel):
 def add_port(addport: AddPort, api_key: str = fastapi.Header(...)):
     if not check_authentication(api_key):
         raise NOT_AUTH
+    if addport.ext_port < MIN_PORT or addport.ext_port > MAX_PORT:
+        raise fastapi.HTTPException(status_code=400, detail=f"Port must be between {MIN_PORT} and {MAX_PORT}")
     if adder_port(addport.ext_port, addport.ip, addport.in_port):
         return {"message": "Port added successfully"}
     raise fastapi.HTTPException(status_code=400, detail="Failed to add port")
