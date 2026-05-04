@@ -184,6 +184,28 @@ def remake_vm(username: str, vmid: int, api_key: str = fastapi.Header(...)):
     with write_lock:
         vmid, private_pem, password = remaker_vm(username, vmid)
         return {"vmid": vmid, "private_key": private_pem, "password": password}
+
+@app.post("/api/vm/start")
+def start_vm(vmid: int, api_key: str = fastapi.Header(...)):
+    if not check_authentication(api_key):
+        raise NOT_AUTH
+    with write_lock:
+        try:
+            proxmox_api.start_vm(vmid)
+            return {"message": f"VM {vmid} started successfully"}
+        except Exception as e:
+            raise fastapi.HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/vm/stop")
+def stop_vm(vmid: int, api_key: str = fastapi.Header(...)):
+    if not check_authentication(api_key):
+        raise NOT_AUTH
+    with write_lock:
+        try:
+            proxmox_api.stop_vm(vmid)
+            return {"message": f"VM {vmid} stopped successfully"}
+        except Exception as e:
+            raise fastapi.HTTPException(status_code=500, detail=str(e))
         
 @app.get("/api/vm/status")
 def get_vm_status(vmid: int, api_key: str = fastapi.Header(...)):
